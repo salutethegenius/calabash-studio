@@ -22,11 +22,18 @@ export async function POST(request: Request) {
 
   const supabase = getServiceSupabase();
 
-  // Accept either UUID id or link_token
+  // Public pay URLs use link_token (not UUID). Query by the right column —
+  // PostgREST rejects non-UUIDs in an `id.eq.` OR filter with 22P02.
+  const linkId = parsed.data.linkId;
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      linkId
+    );
+
   const { data: link, error } = await supabase
     .from("payment_links")
     .select("*")
-    .or(`id.eq.${parsed.data.linkId},link_token.eq.${parsed.data.linkId}`)
+    .eq(isUuid ? "id" : "link_token", linkId)
     .maybeSingle();
 
   if (error) {

@@ -1,0 +1,115 @@
+-- Calabash Studio V1 — app schema
+-- Better Auth owns user / session / account / verification (created via Better Auth CLI or seed).
+-- Apply this file against your Supabase Postgres (SQL editor or supabase db execute).
+
+create extension if not exists "pgcrypto";
+
+-- Better Auth core tables (idempotent; matches Better Auth drizzle/pg defaults)
+create table if not exists "user" (
+  id text primary key,
+  name text not null,
+  email text not null unique,
+  email_verified boolean not null default false,
+  image text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists "session" (
+  id text primary key,
+  expires_at timestamptz not null,
+  token text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  ip_address text,
+  user_agent text,
+  user_id text not null references "user"(id) on delete cascade
+);
+
+create table if not exists "account" (
+  id text primary key,
+  account_id text not null,
+  provider_id text not null,
+  user_id text not null references "user"(id) on delete cascade,
+  access_token text,
+  refresh_token text,
+  id_token text,
+  access_token_expires_at timestamptz,
+  refresh_token_expires_at timestamptz,
+  scope text,
+  password text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists "verification" (
+  id text primary key,
+  identifier text not null,
+  value text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- App tables
+create table if not exists payment_links (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  amount_cents integer not null,
+  status text not null default 'pending',
+  link_token text not null unique,
+  created_at timestamptz not null default now(),
+  paid_at timestamptz
+);
+
+create table if not exists transactions (
+  id uuid primary key default gen_random_uuid(),
+  link_id uuid references payment_links(id) on delete set null,
+  customer_ref text,
+  amount_cents integer not null,
+  status text not null,
+  created_at timestamptz not null default now(),
+  raw_payload jsonb
+);
+
+create table if not exists settings (
+  id uuid primary key default gen_random_uuid(),
+  key text unique not null,
+  value text
+);
+
+create table if not exists checkout_sessions (
+  id uuid primary key default gen_random_uuid(),
+  link_id uuid not null references payment_links(id) on delete cascade,
+  order_number text not null unique,
+  expected_amount_cents integer not null,
+  status text not null default 'pending',
+  created_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+create index if not exists idx_payment_links_status on payment_links(status);
+create index if not exists idx_payment_links_created_at on payment_links(created_at desc);
+create index if not exists idx_transactions_created_at on transactions(created_at desc);
+create index if not exists idx_checkout_sessions_order on checkout_sessions(order_number);
+
+-- RLS: only service_role can read/write app tables.
+-- The /pay/[linkId] page is public at HTTP, but the Next.js server reads via
+-- SUPABASE_SERVICE_ROLE_KEY — the customer never touches Supabase directly.
+alter table payment_links enable row level security;
+alter table transactions enable row level security;
+alter table settings enable row level security;
+alter table checkout_sessions enable row level security;
+
+-- No anon/authenticated policies = blocked for those roles.
+-- service_role bypasses RLS by default in Supabase.
+
+-- Default business settings
+insert into settings (key, value) values
+  ('business_name', 'The Calabash Studio'),
+  ('cng_environment', 'qa')
+on conflict (key) do nothing;
+
+-- Storage bucket for logos (run in Supabase dashboard or via API if needed):
+-- insert into storage.buckets (id, name, public) values ('calabash-assets', 'calabash-assets', true)
+-- on conflict (id) do nothing;

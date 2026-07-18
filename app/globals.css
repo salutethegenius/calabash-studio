@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --calabash-dark-green: #124940;
+  --calabash-orange: #e9851c;
+  --calabash-light-green: #a9c6c1;
+  --calabash-beige: #f9eedc;
+  --calabash-white: #ffffff;
+  --background: #f9eedc;
+  --foreground: #124940;
+  --font-heading: var(--font-cormorant);
+  --font-body: var(--font-jost);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-calabash-dark-green: var(--calabash-dark-green);
+  --color-calabash-orange: var(--calabash-orange);
+  --color-calabash-light-green: var(--calabash-light-green);
+  --color-calabash-beige: var(--calabash-beige);
+  --font-sans: var(--font-jost);
+  --font-serif: var(--font-cormorant);
+}
+
+body {
+  background: var(--calabash-beige);
+  color: var(--calabash-dark-green);
+  font-family: var(--font-jost), system-ui, sans-serif;
+}
+
+.font-heading {
+  font-family: var(--font-cormorant), Georgia, serif;
+}
+
+.font-body {
+  font-family: var(--font-jost), system-ui, sans-serif;
+}
+
+/* Dashboard surface helpers */
+.dash-surface {
+  background: var(--calabash-white);
+  border: 1px solid color-mix(in srgb, var(--calabash-light-green) 55%, white);
+}
+
+.dash-muted {
+  color: color-mix(in srgb, var(--calabash-dark-green) 65%, white);
+}

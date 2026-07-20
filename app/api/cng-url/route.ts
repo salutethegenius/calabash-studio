@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getServiceSupabase } from "@/lib/supabase/server";
 import { makeOrderNumber } from "@/lib/cashango/client";
+import { applyPromo } from "@/lib/promo";
+import { getServiceSupabase } from "@/lib/supabase/server";
 
 const schema = z.object({
   linkId: z.string().min(1),
+  promoCode: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -49,12 +51,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const promo = applyPromo(link.amount_cents, parsed.data.promoCode);
+  if (!promo.ok) {
+    return NextResponse.json({ message: promo.message }, { status: 400 });
+  }
+
   const orderNumber = makeOrderNumber(link.link_token);
 
   const { error: sessionError } = await supabase.from("checkout_sessions").insert({
     link_id: link.id,
     order_number: orderNumber,
-    expected_amount_cents: link.amount_cents,
+    expected_amount_cents: promo.amountCents,
     status: "pending",
   });
 
@@ -68,5 +75,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     redirectPath: `/api/cng/redirect/${encodeURIComponent(orderNumber)}`,
     orderNumber,
+    amountCents: promo.amountCents,
+    promoApplied: promo.applied,
   });
 }

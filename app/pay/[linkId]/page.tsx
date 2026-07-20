@@ -72,20 +72,25 @@ export default async function PayPage({
             <p className="font-heading text-xl text-[var(--calabash-dark-green)]">
               {link.label}
             </p>
-            <p className="font-heading text-4xl font-semibold text-[var(--calabash-orange)]">
-              {formatBsd(link.amount_cents)}
-            </p>
           </div>
 
           {isPaid ? (
-            <div className="rounded-lg bg-green-50 px-4 py-6 text-center">
-              <p className="font-heading text-xl text-green-800">Paid</p>
-              <p className="mt-1 text-sm text-green-700">
-                This payment has already been completed. Thank you!
+            <div className="space-y-4">
+              <p className="text-center font-heading text-4xl font-semibold text-[var(--calabash-orange)]">
+                {formatBsd(link.amount_cents)}
               </p>
+              <div className="rounded-lg bg-green-50 px-4 py-6 text-center">
+                <p className="font-heading text-xl text-green-800">Paid</p>
+                <p className="mt-1 text-sm text-green-700">
+                  This payment has already been completed. Thank you!
+                </p>
+              </div>
             </div>
           ) : (
-            <PayButton linkId={link.link_token} />
+            <PayButton
+              linkId={link.link_token}
+              amountCents={link.amount_cents}
+            />
           )}
         </div>
       </main>

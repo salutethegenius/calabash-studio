@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Link2,
@@ -22,6 +23,23 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            window.location.href = "/login";
+          },
+        },
+      });
+    } catch {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <aside className="flex h-screen w-60 flex-col bg-[var(--calabash-dark-green)] text-[var(--calabash-beige)]">
@@ -73,19 +91,12 @@ export function Sidebar() {
       <div className="border-t border-white/10 px-3 py-4">
         <button
           type="button"
-          onClick={() =>
-            signOut({
-              fetchOptions: {
-                onSuccess: () => {
-                  window.location.href = "/login";
-                },
-              },
-            })
-          }
-          className="mb-3 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[var(--calabash-beige)]/80 hover:bg-white/10 hover:text-white"
+          disabled={signingOut}
+          onClick={handleSignOut}
+          className="mb-3 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[var(--calabash-beige)]/80 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogOut className="h-4 w-4" />
-          Sign out
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
         <p className="px-3 text-[11px] text-[var(--calabash-light-green)]">
           Powered by KemisPay

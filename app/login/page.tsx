@@ -2,14 +2,12 @@
 
 import Image from "next/image";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,15 +23,13 @@ export default function LoginPage() {
       password,
     });
 
-    setLoading(false);
-
     if (signInError) {
+      setLoading(false);
       setError(signInError.message || "Invalid email or password");
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    window.location.assign("/dashboard");
   }
 
   return (

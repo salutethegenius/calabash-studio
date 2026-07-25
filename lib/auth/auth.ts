@@ -16,6 +16,12 @@ export function createAuth({ disableSignUp }: { disableSignUp: boolean }) {
       enabled: true,
       disableSignUp,
     },
+    session: {
+      cookieCache: {
+        enabled: true,
+        maxAge: 60, // 1 minute — short so sign-out revoke stays near-immediate
+      },
+    },
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
     trustedOrigins: process.env.BETTER_AUTH_URL

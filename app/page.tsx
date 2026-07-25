@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
 
-export default async function HomePage() {
-  const session = await getSession();
-  redirect(session ? "/dashboard" : "/login");
+/** Middleware already redirects `/` based on session cookie presence. */
+export default function HomePage() {
+  redirect("/login");
 }

@@ -30,15 +30,22 @@ function hasSessionCookie(request: NextRequest): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const authed = hasSessionCookie(request);
+
+  if (pathname === "/") {
+    return NextResponse.redirect(
+      new URL(authed ? "/dashboard" : "/login", request.url)
+    );
+  }
 
   if (pathname.startsWith("/dashboard")) {
-    if (!hasSessionCookie(request)) {
+    if (!authed) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
   if (pathname === "/login") {
-    if (hasSessionCookie(request)) {
+    if (authed) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

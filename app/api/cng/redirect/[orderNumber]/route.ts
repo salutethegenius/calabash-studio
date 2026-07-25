@@ -26,34 +26,38 @@ export async function GET(
     .maybeSingle();
 
   if (error || !session) {
-    return NextResponse.json({ message: "Unknown order" }, { status: 404 });
+    return NextResponse.redirect(
+      new URL("/cng/return/error?reason=unknown_order", appBaseUrl())
+    );
   }
 
   if (session.status === "completed") {
     return NextResponse.redirect(
-      new URL(`/cng/return/success?ORDER_NUMBER=${orderNumber}&STATUS=PAID`, appBaseUrl())
+      new URL(
+        `/cng/return/success?ORDER_NUMBER=${encodeURIComponent(orderNumber)}&STATUS=PAID`,
+        appBaseUrl()
+      )
     );
   }
 
   let credentials;
   try {
     credentials = await getCngCredentials();
-  } catch (err) {
-    return NextResponse.json(
-      {
-        message:
-          err instanceof Error
-            ? err.message
-            : "Cash N' Go credentials not configured",
-      },
-      { status: 500 }
+  } catch {
+    return NextResponse.redirect(
+      new URL(
+        `/cng/return/error?reason=no_credentials`,
+        appBaseUrl()
+      )
     );
   }
 
   if (!credentials.merchantId || !credentials.apiKey) {
-    return NextResponse.json(
-      { message: "Cash N' Go merchant credentials are not configured" },
-      { status: 500 }
+    return NextResponse.redirect(
+      new URL(
+        "/cng/return/error?reason=invalid_merchant",
+        appBaseUrl()
+      )
     );
   }
 

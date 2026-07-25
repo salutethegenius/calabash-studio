@@ -27,10 +27,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Unlock sign-up for this process only (see disableSignUp in lib/auth/auth.ts)
-  process.env.SEED_ADMIN = "1";
-
-  const { auth } = await import("../lib/auth/auth");
+  const { createAuth } = await import("../lib/auth/auth");
+  // Use a dedicated auth instance that allows sign-up only for this seed operation.
+  const auth = createAuth({ disableSignUp: false });
 
   try {
     const result = await auth.api.signUpEmail({

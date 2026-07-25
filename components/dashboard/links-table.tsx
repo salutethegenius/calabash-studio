@@ -27,6 +27,7 @@ function statusClass(status: string) {
 export function LinksTable({ initialLinks }: { initialLinks: LinkRow[] }) {
   const [links, setLinks] = useState(initialLinks);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function copy(url: string, id: string) {
     await navigator.clipboard.writeText(url);
@@ -36,9 +37,14 @@ export function LinksTable({ initialLinks }: { initialLinks: LinkRow[] }) {
 
   async function remove(id: string) {
     if (!confirm("Delete this payment link?")) return;
+    setDeleteError(null);
+
     const res = await fetch(`/api/payment-links/${id}`, { method: "DELETE" });
     if (res.ok) {
       setLinks((prev) => prev.filter((l) => l.id !== id));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setDeleteError(data.message || "Failed to delete link");
     }
   }
 
@@ -51,9 +57,15 @@ export function LinksTable({ initialLinks }: { initialLinks: LinkRow[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--calabash-light-green)]/50 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-[var(--calabash-light-green)]/40 bg-[var(--calabash-beige)] text-[var(--calabash-dark-green)]/70">
+    <>
+      {deleteError && (
+        <p className="mb-4 text-sm text-red-600" role="alert">
+          {deleteError}
+        </p>
+      )}
+      <div className="overflow-hidden rounded-lg border border-[var(--calabash-light-green)]/50 bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-[var(--calabash-light-green)]/40 bg-[var(--calabash-beige)] text-[var(--calabash-dark-green)]/70">
           <tr>
             <th className="px-4 py-3 font-medium">Service / Product</th>
             <th className="px-4 py-3 font-medium">Amount</th>
@@ -122,5 +134,6 @@ export function LinksTable({ initialLinks }: { initialLinks: LinkRow[] }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }

@@ -3,11 +3,10 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { getServiceSupabase } from "@/lib/supabase/server";
-import { dollarsToCents } from "@/lib/utils";
 
 const createSchema = z.object({
   label: z.string().min(1).max(200),
-  amount: z.number().positive().min(1),
+  amount: z.number().int().positive().min(1).max(100000000),
 });
 
 function appBaseUrl() {
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const amountCents = dollarsToCents(parsed.data.amount);
+  const amountCents = parsed.data.amount;
   const linkToken = nanoid(16);
 
   const supabase = getServiceSupabase();

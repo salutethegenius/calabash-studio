@@ -1,4 +1,5 @@
 import { toDollarsString } from "@/lib/utils";
+import { nanoid } from "nanoid";
 import { resolveCngEndpoint } from "./endpoints";
 
 const CNG_OPTION_MAP: Record<string, string> = {
@@ -31,7 +32,9 @@ export type CngUrlParams = {
 
 /**
  * Build the Cash N' Go / PayLanes Web Payment Auth redirect URL.
- * Pass the Headers API key value as API_KEY query param (not as an HTTP header).
+ * The Cash N' Go docs allow the API key as a header or query parameter, but the
+ * browser-initiated GET to the payment page must carry it in the URL, so the key
+ * is visible to the customer. Rotate it regularly and keep it scoped to this integration.
  */
 export function buildCngPaymentUrl(params: CngUrlParams): string {
   // Browser return pages (display only — settlement is via signed webhook)
@@ -41,19 +44,20 @@ export function buildCngPaymentUrl(params: CngUrlParams): string {
     params.paymentOptions || "card,mmx,cng"
   );
 
-  const urlParams = new URLSearchParams();
-  urlParams.set("AUTH_ID", params.authId);
-  urlParams.set("AMOUNT", toDollarsString(params.amountCents));
-  urlParams.set("URL_SUCCESS", successUrl);
-  urlParams.set("URL_CANCEL", cancelUrl);
-  urlParams.set("ORDER_NUMBER", params.orderNumber);
-  urlParams.set("PAYMENT_OPTIONS", resolvedPaymentOpts);
+  const url = new URL(params.endpoint);
+  url.searchParams.set("API_KEY", params.apiKey);
+  url.searchParams.set("AUTH_ID", params.authId);
+  url.searchParams.set("AMOUNT", toDollarsString(params.amountCents));
+  url.searchParams.set("URL_SUCCESS", successUrl);
+  url.searchParams.set("URL_CANCEL", cancelUrl);
+  url.searchParams.set("ORDER_NUMBER", params.orderNumber);
+  url.searchParams.set("PAYMENT_OPTIONS", resolvedPaymentOpts);
 
-  return `${params.endpoint}?API_KEY=${encodeURIComponent(params.apiKey)}&${urlParams.toString()}`;
+  return url.toString();
 }
 
 export function makeOrderNumber(linkToken: string): string {
-  return `${linkToken}__${Date.now()}`;
+  return `${linkToken}__${Date.now()}__${nanoid(6)}`;
 }
 
 export { resolveCngEndpoint };

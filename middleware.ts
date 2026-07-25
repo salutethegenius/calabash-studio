@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Lightweight cookie presence check (avoids pulling Better Auth crypto into Edge).
+ * Lightweight cookie presence check (avoids pulling Better Auth crypto / DB access into Edge).
  * Full session validation still happens in app/dashboard/layout.tsx via auth.api.getSession().
  */
+const SESSION_COOKIE_NAMES = new Set([
+  "better-auth.session",
+  "better-auth.session_token",
+]);
+
 function hasSessionCookie(request: NextRequest): boolean {
-  const all = request.cookies.getAll();
-  return all.some(
-    (c) =>
-      c.name.includes("session_token") ||
-      c.name.includes("better-auth.session")
-  );
+  return request.cookies
+    .getAll()
+    .some(
+      (c) =>
+        SESSION_COOKIE_NAMES.has(c.name) &&
+        c.value.length > 0
+    );
 }
 
 export function middleware(request: NextRequest) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { getServiceSupabase } from "@/lib/supabase/server";
 
@@ -12,6 +13,12 @@ export async function DELETE(
   }
 
   const { id } = await context.params;
+
+  const idParse = z.string().uuid().safeParse(id);
+  if (!idParse.success) {
+    return NextResponse.json({ message: "Invalid link ID" }, { status: 400 });
+  }
+
   const supabase = getServiceSupabase();
 
   const { error } = await supabase.from("payment_links").delete().eq("id", id);

@@ -3,6 +3,34 @@ import { getSession } from "@/lib/auth/session";
 import { getServiceSupabase } from "@/lib/supabase/server";
 import { upsertSettings } from "@/lib/settings";
 import { SETTINGS_KEYS } from "@/lib/db/schema";
+import { resolveCngEndpoint } from "@/lib/cashango/endpoints";
+
+const LOGO_MAX_SIZE = 2 * 1024 * 1024; // 2 MB
+const LOGO_ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+];
+const LOGO_ALLOWED_EXT = ["jpg", "jpeg", "png", "webp", "gif", "svg"];
+
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
+};
+
+function getLogoExtension(file: File): string | null {
+  if (file.type && LOGO_ALLOWED_TYPES.includes(file.type)) {
+    return MIME_TO_EXT[file.type];
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext && LOGO_ALLOWED_EXT.includes(ext)) return ext;
+  return null;
+}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -18,6 +46,23 @@ export async function POST(request: Request) {
   const cngEndpointOverride = String(
     form.get("cngEndpointOverride") ?? ""
   ).trim();
+
+  if (cngEndpointOverride) {
+    try {
+      resolveCngEndpoint("qa", cngEndpointOverride);
+    } catch (err) {
+      return NextResponse.json(
+        {
+          message:
+            err instanceof Error
+              ? err.message
+              : "Invalid Cash N' Go endpoint override",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   const cngApiKey = String(form.get("cngApiKey") ?? "").trim();
   const cngWebhookSecret = String(form.get("cngWebhookSecret") ?? "").trim();
   const logo = form.get("logo");
@@ -39,15 +84,29 @@ export async function POST(request: Request) {
   let logoPath: string | null = null;
 
   if (logo instanceof File && logo.size > 0) {
+    if (logo.size > LOGO_MAX_SIZE) {
+      return NextResponse.json(
+        { message: "Logo must be under 2 MB" },
+        { status: 400 }
+      );
+    }
+
+    const ext = getLogoExtension(logo);
+    if (!ext) {
+      return NextResponse.json(
+        { message: "Logo must be an image (jpg, png, webp, gif, svg)" },
+        { status: 400 }
+      );
+    }
+
     const supabase = getServiceSupabase();
-    const ext = logo.name.split(".").pop() || "png";
     const path = `logos/logo-${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await logo.arrayBuffer());
     const { error: uploadError } = await supabase.storage
       .from("calabash-assets")
       .upload(path, buffer, {
-        contentType: logo.type || "image/png",
+        contentType: logo.type || `image/${ext}`,
         upsert: true,
       });
 

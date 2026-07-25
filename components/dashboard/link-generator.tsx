@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parseDollarsToCents } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
 
 export function LinkGenerator({ onCreated }: { onCreated?: () => void }) {
@@ -21,13 +22,20 @@ export function LinkGenerator({ onCreated }: { onCreated?: () => void }) {
     setLinkUrl(null);
     setLoading(true);
 
+    const amountCents = parseDollarsToCents(amount);
+    if (amountCents === null) {
+      setError("Enter a valid amount with up to two decimals");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/payment-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           label,
-          amount: Number(amount),
+          amount: amountCents,
         }),
       });
       const data = await res.json();

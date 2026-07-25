@@ -5,11 +5,24 @@ export const CNG_ENDPOINTS = {
 
 export type CngEnvironment = keyof typeof CNG_ENDPOINTS;
 
+function validateHttpsUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Cash N' Go endpoint override must be a valid URL");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Cash N' Go endpoint override must use HTTPS");
+  }
+  return value.trim();
+}
+
 export function resolveCngEndpoint(
   environment: string | null | undefined,
   override?: string | null
 ): string {
-  if (override?.trim()) return override.trim();
+  if (override?.trim()) return validateHttpsUrl(override.trim());
   if (environment === "prod") return CNG_ENDPOINTS.prod;
   if (environment === "qa") return CNG_ENDPOINTS.qa;
   return process.env.CASHANGO_DEFAULT_ENV === "prod"

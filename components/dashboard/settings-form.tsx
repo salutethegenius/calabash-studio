@@ -155,6 +155,10 @@ export function SettingsForm({ initial }: SettingsFormProps) {
               Use the Headers key (apikey). Leave blank to keep the current
               value.
             </p>
+            <p className="text-xs text-amber-700">
+              This key is included in the customer-facing Cash N&apos; Go URL.
+              Rotate it regularly and limit its use to this integration.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="webhookSecret">Webhook secret</Label>

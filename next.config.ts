@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   images: {
@@ -18,4 +19,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "kgc-dr",
+  project: "calabash-frontend",
+
+  // Source map upload token (build-time secret)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload a wider set of client files for better stack trace resolution
+  widenClientFileUpload: true,
+
+  // Tunnel route to bypass ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Suppress non-CI build output
+  silent: !process.env.CI,
+});

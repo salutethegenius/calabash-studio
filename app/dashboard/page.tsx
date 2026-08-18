@@ -11,6 +11,7 @@ export default async function DashboardPage() {
     totalInvoicedCents: 0,
     paymentsDueCents: 0,
     todaysRevenueCents: 0,
+    todaysFeesCents: 0,
   };
 
   try {
@@ -31,15 +32,20 @@ export default async function DashboardPage() {
       accent: "text-[var(--calabash-orange)]",
     },
     {
-      label: "Today's Revenue",
+      label: "Today's Revenue (net)",
       value: formatBsd(stats.todaysRevenueCents),
       accent: "text-[var(--calabash-dark-green)]",
+    },
+    {
+      label: "Today's Fees",
+      value: formatBsd(stats.todaysFeesCents),
+      accent: "text-[var(--calabash-orange)]",
     },
   ];
 
   return (
     <DashboardShell title="Dashboard">
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.label} className="overflow-hidden">
             <div className="h-1 bg-[var(--calabash-orange)]" />

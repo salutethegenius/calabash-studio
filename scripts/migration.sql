@@ -69,7 +69,18 @@ create table if not exists transactions (
   amount_cents integer not null,
   status text not null,
   created_at timestamptz not null default now(),
-  raw_payload jsonb
+  raw_payload jsonb,
+  cng_payment_id text,
+  order_number text,
+  fee_cents integer,
+  net_cents integer,
+  payer_email text,
+  payer_phone text,
+  payment_method text,
+  card_type text,
+  processed boolean,
+  cng_created_at timestamptz,
+  synced_at timestamptz
 );
 
 create table if not exists settings (
@@ -91,6 +102,14 @@ create table if not exists checkout_sessions (
 create index if not exists idx_payment_links_status on payment_links(status);
 create index if not exists idx_payment_links_created_at on payment_links(created_at desc);
 create index if not exists idx_transactions_created_at on transactions(created_at desc);
+create unique index if not exists idx_transactions_cng_payment_id
+  on transactions (cng_payment_id)
+  where cng_payment_id is not null;
+create unique index if not exists idx_transactions_order_number
+  on transactions (order_number)
+  where order_number is not null;
+create index if not exists idx_transactions_cng_created_at
+  on transactions (cng_created_at desc);
 create index if not exists idx_checkout_sessions_order on checkout_sessions(order_number);
 
 -- RLS: only service_role can read/write app tables.

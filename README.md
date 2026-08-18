@@ -92,10 +92,12 @@ App tables (`payment_links`, `transactions`, `settings`, `checkout_sessions`) ha
 | `/login` | Admin sign-in |
 | `/dashboard` | Summary cards + link generator |
 | `/dashboard/links` | All payment links |
-| `/dashboard/transactions` | Webhook settlements |
+| `/dashboard/transactions` | CNG-backed history (webhook + sync) |
 | `/dashboard/settings` | Business + Cash N' Go config |
 | `/pay/[linkId]` | Customer payment page |
-| `/api/webhooks/cng` | Authoritative settlement |
+| `/api/webhooks/cng` | Authoritative settlement + transaction-info enrichment |
+| `/api/cng/sync` | Admin-only manual CNG history sync |
+| `/api/cron/cng-sync` | Daily Vercel cron sync (`CRON_SECRET`) |
 
 ## Cash N' Go flow
 
@@ -103,10 +105,33 @@ App tables (`payment_links`, `transactions`, `settings`, `checkout_sessions`) ha
 2. Customer opens `/pay/{token}` → **Pay Now** → `POST /api/cng-url`
 3. Browser hits `GET /api/cng/redirect/{orderNumber}` → 302 to PayLanes with `API_KEY` + `AUTH_ID`
 4. Customer returns to `/cng/return/success` (display only)
-5. Signed webhook `POST /api/webhooks/cng` marks the link paid and inserts a `transactions` row
+5. Signed webhook `POST /api/webhooks/cng` marks the link paid, then looks up the payment via CNG `transaction-info` and **upserts** a `transactions` row (fees, net, payment ID). If that lookup fails, a minimal row is stored and later syncs enrich it.
 
 Sensitive settings (`cng_api_key`, `cng_webhook_secret`) are encrypted with AES-256-GCM (`lib/crypto.ts`) before storage.
 
+## Transaction history (CNG Payment API v1.0)
+
+Calabash no longer relies on webhooks alone. The dashboard can pull authoritative history from:
+
+- `GET /merchant/web-payment/transaction-info` — single payment (used after each webhook)
+- `GET /merchant/web-payment/transactions` — paginated list with `FROM_DATE` / `TO_DATE`
+
+**Manual sync:** on `/dashboard/transactions`, pick a date range (default last 30 days) and click **Sync from CNG**.
+
+**Daily cron:** `GET /api/cron/cng-sync` runs at 06:00 UTC (`vercel.json`) for the last 7 days. Vercel sends `Authorization: Bearer ${CRON_SECRET}`. Cron jobs require a Vercel plan that supports them; if cron is unavailable, use the dashboard button.
+
+Rows upsert by `cng_payment_id` (`specialId`), falling back to `order_number` (`webOrderNumber`), so webhook + sync do not create duplicates. CNG payments with no matching Calabash checkout session are stored with `link_id` null and shown as **External / pre-Calabash**.
+
+### Revenue fields
+
+| Column | Meaning |
+|--------|---------|
+| `amount_cents` | Gross — what the customer paid |
+| `net_cents` | Net — merchant amount after PayLanes fees |
+| `fee_cents` | PayLanes fee |
+
+Dashboard **Today's Revenue** uses `net_cents` when present, otherwise gross. **Today's Fees** sums `fee_cents`.
+
 ## Deploy (Vercel)
 
-Point a Vercel project at this repo, add the same env vars, run the migration + seed against production Supabase, then configure the Cash N' Go webhook to your Vercel URL.
+Point a Vercel project at this repo, add the same env vars (including `CRON_SECRET`), run the migration + seed against production Supabase, then configure the Cash N' Go webhook to your Vercel URL.

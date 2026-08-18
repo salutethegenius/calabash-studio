@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgTable,
@@ -28,12 +29,26 @@ export const transactions = pgTable("transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   linkId: uuid("link_id").references(() => paymentLinks.id),
   customerRef: text("customer_ref"),
+  /** Gross — what the customer paid (CNG `amount` / webhook AMOUNT). */
   amountCents: integer("amount_cents").notNull(),
   status: text("status").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   rawPayload: jsonb("raw_payload"),
+  cngPaymentId: text("cng_payment_id"),
+  orderNumber: text("order_number"),
+  /** PayLanes fee (CNG `fee`). */
+  feeCents: integer("fee_cents"),
+  /** Merchant net after fees (CNG `total`). */
+  netCents: integer("net_cents"),
+  payerEmail: text("payer_email"),
+  payerPhone: text("payer_phone"),
+  paymentMethod: text("payment_method"),
+  cardType: text("card_type"),
+  processed: boolean("processed"),
+  cngCreatedAt: timestamp("cng_created_at", { withTimezone: true }),
+  syncedAt: timestamp("synced_at", { withTimezone: true }),
 });
 
 export const settings = pgTable("settings", {
@@ -71,4 +86,5 @@ export const SETTINGS_KEYS = {
   cngWebhookSecret: "cng_webhook_secret", // encrypted
   cngEnvironment: "cng_environment", // 'qa' | 'prod'
   cngEndpointOverride: "cng_endpoint_override",
+  cngLastSyncAt: "cng_last_sync_at",
 } as const;

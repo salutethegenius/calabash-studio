@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import { fetchCngTransaction, getCngApiAuth } from "@/lib/cashango/api";
+import {
+  mapCngTransactionToRow,
+  mapWebhookPayloadToRow,
+} from "@/lib/cashango/map";
+import { upsertTransactionRow } from "@/lib/cashango/upsert";
 import { verifyWebhookSignature } from "@/lib/cashango/webhook";
 import { getCngCredentials } from "@/lib/settings";
 import { getServiceSupabase } from "@/lib/supabase/server";
@@ -33,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
   }
 
-  const { ORDER_NUMBER, AMOUNT, STATUS, EMAIL, PHONE } = body;
+  const { ORDER_NUMBER, AMOUNT, STATUS } = body;
 
   if (!ORDER_NUMBER || !AMOUNT || STATUS !== "PAID") {
     return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
@@ -56,40 +62,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unknown order" }, { status: 404 });
   }
 
-  if (session.status === "completed") {
-    return NextResponse.json({ ok: true, alreadySettled: true });
+  if (session.status !== "completed") {
+    await supabase
+      .from("checkout_sessions")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", session.id);
+
+    await supabase
+      .from("payment_links")
+      .update({
+        status: "paid",
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", session.link_id);
   }
 
-  const amountCents = Math.round(parseFloat(AMOUNT) * 100);
-  const customerRef = EMAIL || PHONE || ORDER_NUMBER;
+  let row = mapWebhookPayloadToRow(body, session.link_id);
+  try {
+    const auth = await getCngApiAuth();
+    const cngTx = await fetchCngTransaction(auth, {
+      orderNumber: ORDER_NUMBER,
+    });
+    if (cngTx) {
+      row = mapCngTransactionToRow(cngTx, { linkId: session.link_id });
+    }
+  } catch {
+    // Enrichment is best-effort; cron/manual sync will fill fees later.
+  }
 
-  await supabase
-    .from("checkout_sessions")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", session.id);
+  try {
+    await upsertTransactionRow(supabase, row);
+  } catch (err) {
+    return NextResponse.json(
+      {
+        message: err instanceof Error ? err.message : "Failed to save transaction",
+      },
+      { status: 500 }
+    );
+  }
 
-  await supabase
-    .from("payment_links")
-    .update({
-      status: "paid",
-      paid_at: new Date().toISOString(),
-    })
-    .eq("id", session.link_id);
-
-  const { error: txError } = await supabase.from("transactions").insert({
-    link_id: session.link_id,
-    customer_ref: customerRef,
-    amount_cents: amountCents,
-    status: "successful",
-    raw_payload: body,
+  return NextResponse.json({
+    ok: true,
+    alreadySettled: session.status === "completed",
   });
-
-  if (txError) {
-    return NextResponse.json({ message: txError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true });
 }

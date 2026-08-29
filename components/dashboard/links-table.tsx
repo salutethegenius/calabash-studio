@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatBusinessDate } from "@/lib/time";
 import { formatBsd } from "@/lib/utils";
 
 export type LinkRow = {
@@ -95,7 +96,7 @@ export function LinksTable({ initialLinks }: { initialLinks: LinkRow[] }) {
                 </span>
               </td>
               <td className="px-4 py-3 text-[var(--calabash-dark-green)]/70">
-                {new Date(link.created_at).toLocaleDateString()}
+                {formatBusinessDate(link.created_at)}
               </td>
               <td className="px-4 py-3">
                 <Button

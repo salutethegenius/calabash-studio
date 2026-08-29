@@ -87,4 +87,6 @@ export const SETTINGS_KEYS = {
   cngEnvironment: "cng_environment", // 'qa' | 'prod'
   cngEndpointOverride: "cng_endpoint_override",
   cngLastSyncAt: "cng_last_sync_at",
+  promoCode: "promo_code",
+  promoPercent: "promo_percent",
 } as const;

@@ -112,6 +112,25 @@ create index if not exists idx_transactions_cng_created_at
   on transactions (cng_created_at desc);
 create index if not exists idx_checkout_sessions_order on checkout_sessions(order_number);
 
+-- Keep the newest pending session per link so the unique index can apply.
+update checkout_sessions cs
+set status = 'expired'
+where status = 'pending'
+  and exists (
+    select 1
+    from checkout_sessions newer
+    where newer.link_id = cs.link_id
+      and newer.status = 'pending'
+      and (
+        newer.created_at > cs.created_at
+        or (newer.created_at = cs.created_at and newer.id > cs.id)
+      )
+  );
+
+create unique index if not exists idx_checkout_sessions_one_pending
+  on checkout_sessions (link_id)
+  where status = 'pending';
+
 -- RLS: only service_role can read/write app tables.
 -- The /pay/[linkId] page is public at HTTP, but the Next.js server reads via
 -- SUPABASE_SERVICE_ROLE_KEY — the customer never touches Supabase directly.
@@ -126,7 +145,9 @@ alter table checkout_sessions enable row level security;
 -- Default business settings
 insert into settings (key, value) values
   ('business_name', 'The Calabash Studio'),
-  ('cng_environment', 'qa')
+  ('cng_environment', 'qa'),
+  ('promo_code', 'SAP0726'),
+  ('promo_percent', '10')
 on conflict (key) do nothing;
 
 -- Storage bucket for logos (run in Supabase dashboard or via API if needed):

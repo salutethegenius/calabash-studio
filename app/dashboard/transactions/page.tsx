@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { SETTINGS_KEYS } from "@/lib/db/schema";
 import { getSettingMap } from "@/lib/settings";
 import { getServiceSupabase } from "@/lib/supabase/server";
+import { formatBusinessDateTime } from "@/lib/time";
 import { formatBsd } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ function sortKey(row: TransactionRow) {
 export default async function TransactionsPage() {
   let rows: TransactionRow[] = [];
   let lastSyncedAt: string | null = null;
+  let loadError: string | null = null;
 
   try {
     const supabase = getServiceSupabase();
@@ -56,13 +58,19 @@ export default async function TransactionsPage() {
     lastSyncedAt = settings[SETTINGS_KEYS.cngLastSyncAt] || null;
   } catch {
     rows = [];
+    loadError = "Could not load transactions. Check the database connection.";
   }
 
   return (
     <DashboardShell title="Transactions">
+      {loadError && (
+        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {loadError}
+        </p>
+      )}
       <SyncTransactionsButton lastSyncedAt={lastSyncedAt} />
 
-      {rows.length === 0 ? (
+      {loadError ? null : rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--calabash-light-green)] bg-white p-10 text-center text-sm text-[var(--calabash-dark-green)]/60">
           No transactions yet. Sync from Cash N&apos; Go or wait for a completed
           payment.
@@ -127,7 +135,7 @@ export default async function TransactionsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-[var(--calabash-dark-green)]/70">
-                      {new Date(when).toLocaleString()}
+                      {formatBusinessDateTime(when)}
                     </td>
                   </tr>
                 );

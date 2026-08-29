@@ -4,10 +4,12 @@ import {
   mapCngTransactionToRow,
   mapWebhookPayloadToRow,
 } from "@/lib/cashango/map";
+import { settlePaidCheckout } from "@/lib/cashango/settle";
 import { upsertTransactionRow } from "@/lib/cashango/upsert";
 import { verifyWebhookSignature } from "@/lib/cashango/webhook";
 import { getCngCredentials } from "@/lib/settings";
 import { getServiceSupabase } from "@/lib/supabase/server";
+import { parseDollarsToCents } from "@/lib/utils";
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -45,16 +47,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
   }
 
+  const paidCents = parseDollarsToCents(AMOUNT);
+  if (paidCents == null) {
+    return NextResponse.json({ message: "Invalid amount" }, { status: 400 });
+  }
+
   const supabase = getServiceSupabase();
   const { data: session, error: sessionError } = await supabase
     .from("checkout_sessions")
-    .select("*")
+    .select("id, link_id, status, expected_amount_cents")
     .eq("order_number", ORDER_NUMBER)
     .maybeSingle();
 
   if (sessionError) {
     return NextResponse.json(
-      { message: sessionError.message },
+      { message: "Failed to look up checkout session" },
       { status: 500 }
     );
   }
@@ -62,22 +69,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unknown order" }, { status: 404 });
   }
 
-  if (session.status !== "completed") {
-    await supabase
-      .from("checkout_sessions")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", session.id);
+  if (paidCents !== session.expected_amount_cents) {
+    return NextResponse.json(
+      { message: "Amount does not match checkout" },
+      { status: 400 }
+    );
+  }
 
-    await supabase
-      .from("payment_links")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", session.link_id);
+  try {
+    await settlePaidCheckout(supabase, session);
+  } catch {
+    return NextResponse.json(
+      { message: "Failed to settle checkout" },
+      { status: 500 }
+    );
   }
 
   let row = mapWebhookPayloadToRow(body, session.link_id);
@@ -95,11 +100,9 @@ export async function POST(request: Request) {
 
   try {
     await upsertTransactionRow(supabase, row);
-  } catch (err) {
+  } catch {
     return NextResponse.json(
-      {
-        message: err instanceof Error ? err.message : "Failed to save transaction",
-      },
+      { message: "Failed to save transaction" },
       { status: 500 }
     );
   }

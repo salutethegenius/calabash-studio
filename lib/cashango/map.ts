@@ -1,4 +1,4 @@
-import { dollarsToCents } from "@/lib/utils";
+import { dollarsToCents, parseDollarsToCents } from "@/lib/utils";
 import type { CngTransaction } from "./types";
 
 /**
@@ -36,8 +36,7 @@ export function toCents(value: unknown): number | null {
     return dollarsToCents(value);
   }
   if (typeof value === "string" && value.trim()) {
-    const n = Number(value);
-    if (Number.isFinite(n)) return dollarsToCents(n);
+    return parseDollarsToCents(value);
   }
   return null;
 }

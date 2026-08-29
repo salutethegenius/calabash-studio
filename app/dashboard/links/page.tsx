@@ -14,6 +14,7 @@ function appBaseUrl() {
 
 export default async function LinksPage() {
   let rows: LinkRow[] = [];
+  let loadError: string | null = null;
 
   try {
     const supabase = getServiceSupabase();
@@ -31,10 +32,16 @@ export default async function LinksPage() {
     }));
   } catch {
     rows = [];
+    loadError = "Could not load payment links. Check the database connection.";
   }
 
   return (
     <DashboardShell title="Payment Links">
+      {loadError && (
+        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {loadError}
+        </p>
+      )}
       <LinksTable initialLinks={rows} />
     </DashboardShell>
   );

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatBusinessDateTime } from "@/lib/time";
 
 function localIsoDate(date: Date): string {
   const y = date.getFullYear();
@@ -94,7 +95,7 @@ export function SyncTransactionsButton({ lastSyncedAt }: { lastSyncedAt: string 
       </div>
       <div className="text-sm text-[var(--calabash-dark-green)]/70">
         {lastSyncedAt ? (
-          <p>Last synced {new Date(lastSyncedAt).toLocaleString()}</p>
+          <p>Last synced {formatBusinessDateTime(lastSyncedAt)}</p>
         ) : (
           <p>Not synced from CNG yet</p>
         )}

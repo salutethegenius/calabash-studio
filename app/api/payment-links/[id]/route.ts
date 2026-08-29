@@ -23,7 +23,10 @@ export async function DELETE(
 
   const { error } = await supabase.from("payment_links").delete().eq("id", id);
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to delete payment link" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true });

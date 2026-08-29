@@ -16,6 +16,8 @@ type SettingsFormProps = {
     cngWebhookSecretMasked: string;
     cngEnvironment: "qa" | "prod";
     cngEndpointOverride: string;
+    promoCode: string;
+    promoPercent: number;
     hasApiKey: boolean;
     hasWebhookSecret: boolean;
   };
@@ -32,6 +34,10 @@ export function SettingsForm({ initial }: SettingsFormProps) {
   );
   const [cngEndpointOverride, setCngEndpointOverride] = useState(
     initial.cngEndpointOverride
+  );
+  const [promoCode, setPromoCode] = useState(initial.promoCode);
+  const [promoPercent, setPromoPercent] = useState(
+    initial.promoPercent ? String(initial.promoPercent) : ""
   );
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPath, setLogoPath] = useState(initial.logoPath);
@@ -52,6 +58,8 @@ export function SettingsForm({ initial }: SettingsFormProps) {
       form.set("cngMerchantId", cngMerchantId);
       form.set("cngEnvironment", cngEnvironment);
       form.set("cngEndpointOverride", cngEndpointOverride);
+      form.set("promoCode", promoCode.trim());
+      form.set("promoPercent", promoPercent.trim());
       if (cngApiKey.trim()) form.set("cngApiKey", cngApiKey.trim());
       if (cngWebhookSecret.trim())
         form.set("cngWebhookSecret", cngWebhookSecret.trim());
@@ -115,7 +123,7 @@ export function SettingsForm({ initial }: SettingsFormProps) {
             <Input
               id="logo"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
             />
           </div>
@@ -196,6 +204,41 @@ export function SettingsForm({ initial }: SettingsFormProps) {
               value={cngEndpointOverride}
               onChange={(e) => setCngEndpointOverride(e.target.value)}
               placeholder="Leave blank to use QA/Prod default"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-xl font-semibold text-[var(--calabash-dark-green)]">
+            Promo
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-[var(--calabash-dark-green)]/70">
+            Leave the code blank to hide the promo field on payment pages.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="promoCode">Promo code</Label>
+            <Input
+              id="promoCode"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="e.g. SAP0726"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promoPercent">Percent off</Label>
+            <Input
+              id="promoPercent"
+              type="number"
+              min={1}
+              max={99}
+              value={promoPercent}
+              onChange={(e) => setPromoPercent(e.target.value)}
+              placeholder="10"
             />
           </div>
         </CardContent>

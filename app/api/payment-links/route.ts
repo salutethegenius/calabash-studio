@@ -30,7 +30,10 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to load payment links" },
+      { status: 500 }
+    );
   }
 
   const base = appBaseUrl();
@@ -79,7 +82,10 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to create payment link" },
+      { status: 500 }
+    );
   }
 
   const url = `${appBaseUrl()}/pay/${linkToken}`;

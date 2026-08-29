@@ -27,6 +27,7 @@ const sample: CngTransaction = {
 test("toCents maps dollars to integer cents", () => {
   assert.equal(toCents(1.5), 150);
   assert.equal(toCents("1.46"), 146);
+  assert.equal(toCents("45.00"), 4500);
   assert.equal(toCents(0.04), 4);
   assert.equal(toCents(null), null);
 });

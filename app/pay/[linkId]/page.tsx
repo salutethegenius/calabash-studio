@@ -26,11 +26,18 @@ export default async function PayPage({
   let settings = {
     businessName: "The Calabash Studio",
     logoPath: null as string | null,
+    promoCode: "",
+    promoPercent: 0,
   };
 
   try {
     const app = await getAppSettings();
-    settings = { businessName: app.businessName, logoPath: app.logoPath };
+    settings = {
+      businessName: app.businessName,
+      logoPath: app.logoPath,
+      promoCode: app.promoCode,
+      promoPercent: app.promoPercent,
+    };
   } catch {
     // fall back to defaults
   }
@@ -90,6 +97,8 @@ export default async function PayPage({
             <PayButton
               linkId={link.link_token}
               amountCents={link.amount_cents}
+              promoCode={settings.promoCode}
+              promoPercent={settings.promoPercent}
             />
           )}
         </div>

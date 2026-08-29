@@ -1,3 +1,4 @@
+import { startOfDayInTimeZone } from "@/lib/time";
 import { getServiceSupabase } from "@/lib/supabase/server";
 
 export type DashboardStats = {
@@ -33,8 +34,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     .filter((row) => row.status === "pending")
     .reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const startMs = startOfDayInTimeZone().getTime();
 
   const { data: txs, error: txsError } = await supabase
     .from("transactions")
@@ -42,8 +42,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     .eq("status", "successful");
 
   if (txsError) throw txsError;
-
-  const startMs = startOfDay.getTime();
   const todays = (txs ?? []).filter((row) => {
     const when = row.cng_created_at || row.created_at;
     return when ? new Date(when).getTime() >= startMs : false;

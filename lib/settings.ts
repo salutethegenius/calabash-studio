@@ -2,6 +2,7 @@ import { decrypt, encrypt } from "@/lib/crypto";
 import { getServiceSupabase } from "@/lib/supabase/server";
 import { SETTINGS_KEYS } from "@/lib/db/schema";
 import { resolveCngEndpoint } from "@/lib/cashango/endpoints";
+import { parsePromoPercent } from "@/lib/promo";
 
 const ENCRYPTED_KEYS = new Set<string>([
   SETTINGS_KEYS.cngApiKey,
@@ -17,6 +18,8 @@ export type AppSettings = {
   cngWebhookSecret: string;
   cngEnvironment: "qa" | "prod";
   cngEndpointOverride: string;
+  promoCode: string;
+  promoPercent: number;
 };
 
 const DEFAULTS: AppSettings = {
@@ -29,6 +32,8 @@ const DEFAULTS: AppSettings = {
   cngEnvironment:
     process.env.CASHANGO_DEFAULT_ENV === "prod" ? "prod" : "qa",
   cngEndpointOverride: "",
+  promoCode: "",
+  promoPercent: 0,
 };
 
 export async function getSettingMap(): Promise<Record<string, string>> {
@@ -80,6 +85,12 @@ export async function getAppSettings(): Promise<AppSettings> {
     cngEndpointOverride: readPlain(
       SETTINGS_KEYS.cngEndpointOverride,
       DEFAULTS.cngEndpointOverride
+    ),
+    promoCode: readPlain(SETTINGS_KEYS.promoCode, DEFAULTS.promoCode)
+      .trim()
+      .toUpperCase(),
+    promoPercent: parsePromoPercent(
+      readPlain(SETTINGS_KEYS.promoPercent, String(DEFAULTS.promoPercent))
     ),
   };
 }

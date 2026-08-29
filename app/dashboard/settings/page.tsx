@@ -5,6 +5,7 @@ import { getAppSettings, maskSecret } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  let loadError: string | null = null;
   let settings: Awaited<ReturnType<typeof getAppSettings>> = {
     businessName: "The Calabash Studio",
     contactEmail: "",
@@ -14,16 +15,23 @@ export default async function SettingsPage() {
     cngWebhookSecret: "",
     cngEnvironment: "qa",
     cngEndpointOverride: "",
+    promoCode: "",
+    promoPercent: 0,
   };
 
   try {
     settings = await getAppSettings();
   } catch {
-    // env not configured yet
+    loadError = "Could not load settings. Check the database connection.";
   }
 
   return (
     <DashboardShell title="Settings">
+      {loadError && (
+        <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {loadError}
+        </p>
+      )}
       <SettingsForm
         initial={{
           businessName: settings.businessName,
@@ -34,6 +42,8 @@ export default async function SettingsPage() {
           cngWebhookSecretMasked: maskSecret(settings.cngWebhookSecret),
           cngEnvironment: settings.cngEnvironment,
           cngEndpointOverride: settings.cngEndpointOverride,
+          promoCode: settings.promoCode,
+          promoPercent: settings.promoPercent,
           hasApiKey: Boolean(settings.cngApiKey),
           hasWebhookSecret: Boolean(settings.cngWebhookSecret),
         }}

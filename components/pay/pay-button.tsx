@@ -4,25 +4,30 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  isValidPromoPreview,
-  previewPromoAmount,
-} from "@/lib/promo";
+import { isValidPromoPreview, previewPromoAmount } from "@/lib/promo";
 import { formatBsd } from "@/lib/utils";
 
 export function PayButton({
   linkId,
   amountCents,
+  promoCode: configuredCode,
+  promoPercent,
 }: {
   linkId: string;
   amountCents: number;
+  promoCode: string;
+  promoPercent: number;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
+  const promoEnabled = Boolean(configuredCode && promoPercent > 0);
+  const promoConfig = promoEnabled
+    ? { code: configuredCode, percent: promoPercent }
+    : null;
 
-  const promoMatches = isValidPromoPreview(promoCode);
-  const displayAmount = previewPromoAmount(amountCents, promoCode);
+  const promoMatches = isValidPromoPreview(promoCode, promoConfig);
+  const displayAmount = previewPromoAmount(amountCents, promoCode, promoConfig);
 
   async function startPayment() {
     setLoading(true);
@@ -59,7 +64,7 @@ export function PayButton({
               {formatBsd(displayAmount)}
             </p>
             <p className="font-body text-sm text-[var(--calabash-dark-green)]">
-              10% promo applied
+              {promoPercent}% promo applied
             </p>
           </>
         ) : (
@@ -69,21 +74,23 @@ export function PayButton({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="promoCode">Promo code (optional)</Label>
-        <Input
-          id="promoCode"
-          name="promoCode"
-          autoComplete="off"
-          placeholder="Enter promo code"
-          value={promoCode}
-          onChange={(e) => {
-            setPromoCode(e.target.value);
-            setError(null);
-          }}
-          disabled={loading}
-        />
-      </div>
+      {promoEnabled && (
+        <div className="space-y-2">
+          <Label htmlFor="promoCode">Promo code (optional)</Label>
+          <Input
+            id="promoCode"
+            name="promoCode"
+            autoComplete="off"
+            placeholder="Enter promo code"
+            value={promoCode}
+            onChange={(e) => {
+              setPromoCode(e.target.value);
+              setError(null);
+            }}
+            disabled={loading}
+          />
+        </div>
+      )}
 
       <Button
         type="button"

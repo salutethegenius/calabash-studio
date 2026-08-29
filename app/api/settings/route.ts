@@ -11,16 +11,14 @@ const LOGO_ALLOWED_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
-  "image/svg+xml",
 ];
-const LOGO_ALLOWED_EXT = ["jpg", "jpeg", "png", "webp", "gif", "svg"];
+const LOGO_ALLOWED_EXT = ["jpg", "jpeg", "png", "webp", "gif"];
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
-  "image/svg+xml": "svg",
 };
 
 function getLogoExtension(file: File): string | null {
@@ -65,7 +63,21 @@ export async function POST(request: Request) {
 
   const cngApiKey = String(form.get("cngApiKey") ?? "").trim();
   const cngWebhookSecret = String(form.get("cngWebhookSecret") ?? "").trim();
+  const promoCode = String(form.get("promoCode") ?? "").trim().toUpperCase();
+  const promoPercentRaw = String(form.get("promoPercent") ?? "").trim();
   const logo = form.get("logo");
+
+  let promoPercent = "";
+  if (promoPercentRaw) {
+    const n = Number(promoPercentRaw);
+    if (!Number.isFinite(n) || n <= 0 || n >= 100) {
+      return NextResponse.json(
+        { message: "Promo percent must be between 1 and 99" },
+        { status: 400 }
+      );
+    }
+    promoPercent = String(Math.round(n));
+  }
 
   const updates: Record<string, string | null> = {
     [SETTINGS_KEYS.businessName]: businessName || "The Calabash Studio",
@@ -74,6 +86,8 @@ export async function POST(request: Request) {
     [SETTINGS_KEYS.cngEnvironment]:
       cngEnvironment === "prod" ? "prod" : "qa",
     [SETTINGS_KEYS.cngEndpointOverride]: cngEndpointOverride,
+    [SETTINGS_KEYS.promoCode]: promoCode,
+    [SETTINGS_KEYS.promoPercent]: promoPercent,
   };
 
   // Only overwrite encrypted secrets when a new value is provided
@@ -94,7 +108,7 @@ export async function POST(request: Request) {
     const ext = getLogoExtension(logo);
     if (!ext) {
       return NextResponse.json(
-        { message: "Logo must be an image (jpg, png, webp, gif, svg)" },
+        { message: "Logo must be an image (jpg, png, webp, gif)" },
         { status: 400 }
       );
     }

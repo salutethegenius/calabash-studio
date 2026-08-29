@@ -3,6 +3,7 @@ import { getCngCredentials, upsertSettings } from "@/lib/settings";
 import { getServiceSupabase } from "@/lib/supabase/server";
 import { fetchCngTransactions, getCngApiAuth } from "./api";
 import { mapCngTransactionToRow } from "./map";
+import { settlePaidCheckout } from "./settle";
 import { upsertTransactionRow } from "./upsert";
 
 export type SyncSummary = {
@@ -98,15 +99,18 @@ export async function syncCngTransactions(options?: {
       ),
     ];
 
-    const sessionByOrder = new Map<string, string>();
+    const sessionByOrder = new Map<
+      string,
+      { id: string; link_id: string; status: string }
+    >();
     if (orderNumbers.length > 0) {
       const { data: sessions, error: sessionError } = await supabase
         .from("checkout_sessions")
-        .select("order_number, link_id")
+        .select("id, order_number, link_id, status")
         .in("order_number", orderNumbers);
       if (sessionError) throw sessionError;
       for (const session of sessions ?? []) {
-        sessionByOrder.set(session.order_number, session.link_id);
+        sessionByOrder.set(session.order_number, session);
       }
     }
 
@@ -116,10 +120,11 @@ export async function syncCngTransactions(options?: {
         continue;
       }
 
+      const session = tx.webOrderNumber
+        ? sessionByOrder.get(tx.webOrderNumber)
+        : undefined;
       const row = mapCngTransactionToRow(tx, {
-        linkId: tx.webOrderNumber
-          ? (sessionByOrder.get(tx.webOrderNumber) ?? null)
-          : null,
+        linkId: session?.link_id ?? null,
         syncedAt,
       });
 
@@ -127,6 +132,10 @@ export async function syncCngTransactions(options?: {
         const action = await upsertTransactionRow(supabase, row);
         if (action === "inserted") summary.inserted += 1;
         else summary.updated += 1;
+        if (session && row.status === "successful") {
+          await settlePaidCheckout(supabase, session);
+          session.status = "completed";
+        }
       } catch (err) {
         summary.errors.push(
           `${tx.specialId ?? tx.webOrderNumber ?? "unknown"}: ${

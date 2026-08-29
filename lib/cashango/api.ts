@@ -30,18 +30,20 @@ export async function getCngApiAuth(): Promise<CngApiAuth> {
   };
 }
 
-function buildUrl(
+/** PayLanes requires AUTH_ID + API_KEY as query params (header-only auth is rejected). */
+export function buildCngApiUrl(
   auth: CngApiAuth,
   path: string,
-  params: Record<string, string | number | undefined>
+  params: Record<string, string | number | undefined> = {}
 ): URL {
   const url = new URL(`${auth.baseUrl}${path}`);
-  url.searchParams.set("AUTH_ID", auth.merchantId);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") {
       url.searchParams.set(key, String(value));
     }
   }
+  url.searchParams.set("AUTH_ID", auth.merchantId);
+  url.searchParams.set("API_KEY", auth.apiKey);
   return url;
 }
 
@@ -102,7 +104,7 @@ export async function fetchCngTransaction(
   else if ("paymentId" in lookup) params.PAYMENT_ID = lookup.paymentId;
   else params.PASSPHRASE = lookup.passphrase;
 
-  const url = buildUrl(auth, CNG_API_PATHS.transactionInfo, params);
+  const url = buildCngApiUrl(auth, CNG_API_PATHS.transactionInfo, params);
   const body = await cngGet<CngTransactionDetailResponse>(auth, url);
   return body.transaction ?? null;
 }
@@ -118,7 +120,7 @@ export async function fetchCngTransactions(
   } = {}
 ): Promise<CngTransactionsResponse> {
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 50);
-  const url = buildUrl(auth, CNG_API_PATHS.transactions, {
+  const url = buildCngApiUrl(auth, CNG_API_PATHS.transactions, {
     PAGE: params.page ?? 1,
     LIMIT: limit,
     FROM_DATE: params.fromDate,

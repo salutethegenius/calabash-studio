@@ -59,7 +59,11 @@ create table if not exists payment_links (
   status text not null default 'pending',
   link_token text not null unique,
   created_at timestamptz not null default now(),
-  paid_at timestamptz
+  paid_at timestamptz,
+  kind text not null default 'invoice',
+  sales_end_at timestamptz,
+  capacity integer,
+  sold_count integer not null default 0
 );
 
 create table if not exists transactions (
@@ -96,7 +100,8 @@ create table if not exists checkout_sessions (
   expected_amount_cents integer not null,
   status text not null default 'pending',
   created_at timestamptz not null default now(),
-  completed_at timestamptz
+  completed_at timestamptz,
+  single_use boolean not null default true
 );
 
 create index if not exists idx_payment_links_status on payment_links(status);
@@ -116,11 +121,13 @@ create index if not exists idx_checkout_sessions_order on checkout_sessions(orde
 update checkout_sessions cs
 set status = 'expired'
 where status = 'pending'
+  and single_use = true
   and exists (
     select 1
     from checkout_sessions newer
     where newer.link_id = cs.link_id
       and newer.status = 'pending'
+      and newer.single_use = true
       and (
         newer.created_at > cs.created_at
         or (newer.created_at = cs.created_at and newer.id > cs.id)
@@ -129,7 +136,21 @@ where status = 'pending'
 
 create unique index if not exists idx_checkout_sessions_one_pending
   on checkout_sessions (link_id)
-  where status = 'pending';
+  where status = 'pending' and single_use = true;
+create index if not exists idx_payment_links_kind on payment_links (kind);
+
+create or replace function increment_event_sold_count(p_link_id uuid)
+returns void
+language sql
+as $$
+  update payment_links
+  set sold_count = (
+    select count(*)::int
+    from checkout_sessions
+    where link_id = p_link_id and status = 'completed'
+  )
+  where id = p_link_id and kind = 'event';
+$$;
 
 -- RLS: only service_role can read/write app tables.
 -- The /pay/[linkId] page is public at HTTP, but the Next.js server reads via

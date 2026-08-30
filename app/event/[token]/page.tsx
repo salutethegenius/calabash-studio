@@ -1,28 +1,34 @@
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { PayButton } from "@/components/pay/pay-button";
+import {
+  eventSalesClosed,
+  eventSalesMessage,
+  eventSalesState,
+} from "@/lib/events";
 import { getAppSettings } from "@/lib/settings";
 import { getServiceSupabase } from "@/lib/supabase/server";
+import { formatBusinessDateTime } from "@/lib/time";
 import { formatBsd } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function PayPage({
+export default async function EventPayPage({
   params,
 }: {
-  params: Promise<{ linkId: string }>;
+  params: Promise<{ token: string }>;
 }) {
-  const { linkId } = await params;
+  const { token } = await params;
   const supabase = getServiceSupabase();
 
-  const { data: link, error } = await supabase
+  const { data: event, error } = await supabase
     .from("payment_links")
     .select("*")
-    .eq("link_token", linkId)
+    .eq("link_token", token)
     .maybeSingle();
 
-  if (error || !link) notFound();
-  if (link.kind === "event") redirect(`/event/${link.link_token}`);
+  if (error || !event) notFound();
+  if (event.kind !== "event") redirect(`/pay/${event.link_token}`);
 
   let settings = {
     businessName: "The Calabash Studio",
@@ -44,7 +50,12 @@ export default async function PayPage({
   }
 
   const logoSrc = settings.logoPath || "/calabash-logo.png";
-  const isPaid = link.status === "paid";
+  const state = eventSalesState(event);
+  const closed = eventSalesClosed(event);
+  const remaining =
+    event.capacity != null
+      ? Math.max(0, event.capacity - (event.sold_count ?? 0))
+      : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--calabash-beige)]">
@@ -75,29 +86,41 @@ export default async function PayPage({
 
           <div className="mb-8 space-y-2 text-center">
             <p className="font-body text-sm uppercase tracking-wide text-[var(--calabash-light-green)]">
-              Payment for
+              Event ticket
             </p>
             <p className="font-heading text-xl text-[var(--calabash-dark-green)]">
-              {link.label}
+              {event.label}
             </p>
+            {event.sales_end_at && (
+              <p className="text-sm text-[var(--calabash-dark-green)]/70">
+                Sales end {formatBusinessDateTime(event.sales_end_at)}
+              </p>
+            )}
+            {remaining != null && !closed && (
+              <p className="text-sm text-[var(--calabash-dark-green)]/70">
+                {remaining} ticket{remaining === 1 ? "" : "s"} left
+              </p>
+            )}
           </div>
 
-          {isPaid ? (
+          {closed ? (
             <div className="space-y-4">
               <p className="text-center font-heading text-4xl font-semibold text-[var(--calabash-orange)]">
-                {formatBsd(link.amount_cents)}
+                {formatBsd(event.amount_cents)}
               </p>
-              <div className="rounded-lg bg-green-50 px-4 py-6 text-center">
-                <p className="font-heading text-xl text-green-800">Paid</p>
-                <p className="mt-1 text-sm text-green-700">
-                  This payment has already been completed. Thank you!
+              <div className="rounded-lg bg-[var(--calabash-beige)] px-4 py-6 text-center">
+                <p className="font-heading text-xl text-[var(--calabash-dark-green)]">
+                  {state === "sold_out" ? "Sold out" : "Sales ended"}
+                </p>
+                <p className="mt-1 text-sm text-[var(--calabash-dark-green)]/70">
+                  {eventSalesMessage(state)}
                 </p>
               </div>
             </div>
           ) : (
             <PayButton
-              linkId={link.link_token}
-              amountCents={link.amount_cents}
+              linkId={event.link_token}
+              amountCents={event.amount_cents}
               promoCode={settings.promoCode}
               promoPercent={settings.promoPercent}
             />

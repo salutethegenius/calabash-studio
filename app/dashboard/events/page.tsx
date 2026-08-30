@@ -1,5 +1,6 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { LinksTable, type LinkRow } from "@/components/dashboard/links-table";
+import { EventForm } from "@/components/dashboard/event-form";
+import { EventsTable, type EventRow } from "@/components/dashboard/events-table";
 import { getServiceSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -12,16 +13,18 @@ function appBaseUrl() {
   ).replace(/\/$/, "");
 }
 
-export default async function LinksPage() {
-  let rows: LinkRow[] = [];
+export default async function EventsPage() {
+  let rows: EventRow[] = [];
   let loadError: string | null = null;
 
   try {
     const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from("payment_links")
-      .select("id, label, amount_cents, status, link_token, created_at")
-      .eq("kind", "invoice")
+      .select(
+        "id, label, amount_cents, link_token, sales_end_at, capacity, sold_count"
+      )
+      .eq("kind", "event")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -29,21 +32,25 @@ export default async function LinksPage() {
     const base = appBaseUrl();
     rows = (data ?? []).map((row) => ({
       ...row,
-      url: `${base}/pay/${row.link_token}`,
+      sold_count: row.sold_count ?? 0,
+      url: `${base}/event/${row.link_token}`,
     }));
   } catch {
     rows = [];
-    loadError = "Could not load payment links. Check the database connection.";
+    loadError = "Could not load events. Check the database connection.";
   }
 
   return (
-    <DashboardShell title="Payment Links">
+    <DashboardShell title="Event tickets">
       {loadError && (
         <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {loadError}
         </p>
       )}
-      <LinksTable initialLinks={rows} />
+      <div className="mb-6">
+        <EventForm />
+      </div>
+      <EventsTable initialEvents={rows} />
     </DashboardShell>
   );
 }

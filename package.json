@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/cashango/map.test.ts lib/cashango/api.test.ts lib/promo.test.ts lib/time.test.ts",
+    "test": "tsx --test lib/cashango/map.test.ts lib/cashango/api.test.ts lib/promo.test.ts lib/time.test.ts lib/events.test.ts",
     "seed:admin": "SEED_ADMIN=1 tsx --env-file=.env.local scripts/seed-admin.ts",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

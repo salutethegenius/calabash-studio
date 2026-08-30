@@ -23,6 +23,10 @@ export const paymentLinks = pgTable("payment_links", {
     .notNull()
     .defaultNow(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  kind: text("kind").notNull().default("invoice"),
+  salesEndAt: timestamp("sales_end_at", { withTimezone: true }),
+  capacity: integer("capacity"),
+  soldCount: integer("sold_count").notNull().default(0),
 });
 
 export const transactions = pgTable("transactions", {
@@ -69,6 +73,7 @@ export const checkoutSessions = pgTable("checkout_sessions", {
     .notNull()
     .defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  singleUse: boolean("single_use").notNull().default(true),
 });
 
 export type PaymentLink = typeof paymentLinks.$inferSelect;

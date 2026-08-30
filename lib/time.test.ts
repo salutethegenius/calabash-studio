@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BUSINESS_TIMEZONE, startOfDayInTimeZone } from "./time";
+import {
+  BUSINESS_TIMEZONE,
+  parseNassauDateTimeLocal,
+  startOfDayInTimeZone,
+} from "./time";
 
 test("start of day in Nassau during EDT (UTC-4)", () => {
   // 12:00 Nassau on 29 Aug 2026
@@ -26,4 +30,16 @@ test("start of day in Nassau during EST (UTC-5)", () => {
     startOfDayInTimeZone(now, BUSINESS_TIMEZONE).toISOString(),
     "2026-01-15T05:00:00.000Z"
   );
+});
+
+test("datetime-local is interpreted as Nassau wall clock", () => {
+  assert.equal(
+    parseNassauDateTimeLocal("2026-08-29T18:00")?.toISOString(),
+    "2026-08-29T22:00:00.000Z"
+  );
+  assert.equal(
+    parseNassauDateTimeLocal("2026-01-15T18:00")?.toISOString(),
+    "2026-01-15T23:00:00.000Z"
+  );
+  assert.equal(parseNassauDateTimeLocal("not-a-date"), null);
 });

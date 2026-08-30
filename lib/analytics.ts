@@ -22,7 +22,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const { data: links, error: linksError } = await supabase
     .from("payment_links")
-    .select("amount_cents, status");
+    .select("amount_cents, status, kind")
+    .eq("kind", "invoice");
 
   if (linksError) throw linksError;
 

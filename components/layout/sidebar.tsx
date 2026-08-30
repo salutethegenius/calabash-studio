@@ -10,6 +10,7 @@ import {
   Receipt,
   Settings,
   LogOut,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth/client";
@@ -17,6 +18,7 @@ import { signOut } from "@/lib/auth/client";
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/links", label: "Links", icon: Link2 },
+  { href: "/dashboard/events", label: "Event tickets", icon: Ticket },
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

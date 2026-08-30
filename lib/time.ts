@@ -70,6 +70,38 @@ export function formatBusinessDateTime(value: string | Date): string {
   }).format(date);
 }
 
+/** Instant of a wall-clock date/time in `timeZone`. */
+export function zonedDateTimeToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second = 0,
+  timeZone: string = BUSINESS_TIMEZONE
+): Date {
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let instant = asUtc - timeZoneOffsetMs(new Date(asUtc), timeZone);
+  instant = asUtc - timeZoneOffsetMs(new Date(instant), timeZone);
+  return new Date(instant);
+}
+
+/** Parse `<input type="datetime-local">` as America/Nassau (not the server zone). */
+export function parseNassauDateTimeLocal(value: string): Date | null {
+  const match = value
+    .trim()
+    .match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return null;
+  return zonedDateTimeToUtc(
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] ?? 0)
+  );
+}
+
 export function formatBusinessDate(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("en-BS", {
